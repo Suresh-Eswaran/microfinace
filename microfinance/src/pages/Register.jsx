@@ -9,6 +9,17 @@ const ROLES = [
   { value: 'CREDIT_OFFICER',    label: 'Credit Officer' },
   { value: 'LOAN_OFFICER',      label: 'Loan Officer' },
   { value: 'COLLECTIONS_AGENT', label: 'Collections Agent' },
+  { value: 'CLIENT',            label: 'Client' },
+];
+
+const BRANCHES = [
+  { value: 'Head Office',    label: 'Head Office' },
+  { value: 'Main Branch',    label: 'Main Branch' },
+  { value: 'North Branch',   label: 'North Branch' },
+  { value: 'South Branch',   label: 'South Branch' },
+  { value: 'East Branch',    label: 'East Branch' },
+  { value: 'West Branch',    label: 'West Branch' },
+  { value: 'Central Branch', label: 'Central Branch' },
 ];
 
 export default function Register() {
@@ -16,7 +27,7 @@ export default function Register() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    fullName: '', email: '', password: '', role: 'LOAN_OFFICER', branch: ''
+    fullName: '', email: '', password: '', role: 'LOAN_OFFICER', branch: 'Head Office'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
@@ -46,19 +57,19 @@ export default function Register() {
           <div className="auth-logo-icon">💰</div>
           <div>
             <div className="auth-logo-text">MicroFin</div>
-            <div className="auth-logo-sub">Staff Registration</div>
+            <div className="auth-logo-sub">User Registration</div>
           </div>
         </div>
 
         <h2 style={{ marginBottom: 6 }}>Create account</h2>
-        <p style={{ marginBottom: 24, fontSize: '0.875rem' }}>Register as a staff member to access the system</p>
+        <p style={{ marginBottom: 24, fontSize: '0.875rem' }}>Register to access the microfinance system</p>
 
         {error   && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
 
         <form className="auth-form" onSubmit={handleSubmit} id="register-form">
           <div className="form-group">
-            <label className="form-label" htmlFor="reg-fullname">Full Name</label>
+            <label className="form-label" htmlFor="reg-fullname">Full Name *</label>
             <div style={{ position: 'relative' }}>
               <User size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
               <input id="reg-fullname" className="form-input" type="text" name="fullName" placeholder="Jane Doe" value={form.fullName} onChange={handleChange} required style={{ paddingLeft: 38 }} />
@@ -66,7 +77,7 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="reg-email">Email</label>
+            <label className="form-label" htmlFor="reg-email">Email *</label>
             <div style={{ position: 'relative' }}>
               <Mail size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
               <input id="reg-email" className="form-input" type="email" name="email" placeholder="jane@microfinance.com" value={form.email} onChange={handleChange} required style={{ paddingLeft: 38 }} />
@@ -75,18 +86,17 @@ export default function Register() {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label" htmlFor="reg-role">Role</label>
-              <select id="reg-role" className="form-input" name="role" value={form.role} onChange={handleChange}>
+              <label className="form-label" htmlFor="reg-role">Role *</label>
+              <select id="reg-role" className="form-input" name="role" value={form.role} onChange={handleChange} required>
                 {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="reg-branch">Branch</label>
-              <div style={{ position: 'relative' }}>
-                <Building2 size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                <input id="reg-branch" className="form-input" type="text" name="branch" placeholder="Head Office" value={form.branch} onChange={handleChange} style={{ paddingLeft: 38 }} />
-              </div>
+              <label className="form-label" htmlFor="reg-branch">Branch *</label>
+              <select id="reg-branch" className="form-input" name="branch" value={form.branch} onChange={handleChange} required>
+                {BRANCHES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
+              </select>
             </div>
           </div>
 

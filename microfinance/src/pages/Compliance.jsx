@@ -4,8 +4,8 @@ import { complianceApi } from '../api/adminApi';
 
 export default function Compliance() {
   const [kycReminders, setKycReminders] = useState([]);
-  const [alerts, setAlerts]     = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState('');
   const [exportMsg, setExportMsg] = useState('');
   const [tab, setTab] = useState('alerts');
@@ -33,8 +33,17 @@ export default function Compliance() {
       if (type === 'cibil') result = await complianceApi.cibilExport();
       else if (type === 'rbi') result = await complianceApi.rbiExport();
       else if (type === 'mfin') result = await complianceApi.mfinReport();
-      setExportMsg(`${type.toUpperCase()} export ready. Check your downloads or backend response.`);
-      console.log(`${type} export:`, result);
+
+      // Trigger automatic file download in browser
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(result, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `${type}_report_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      setExportMsg(`${type.toUpperCase()} report generated & downloaded successfully!`);
     } catch (err) {
       setExportMsg(`Export failed: ${err.message}`);
     } finally {
@@ -43,9 +52,9 @@ export default function Compliance() {
   };
 
   const exportActions = [
-    { id: 'cibil', label: 'CIBIL Export',   desc: 'Credit bureau data file', color: 'var(--color-primary)' },
-    { id: 'rbi',   label: 'RBI Report',     desc: 'Reserve Bank of India submission', color: 'var(--color-blue)' },
-    { id: 'mfin',  label: 'MFIN Report',    desc: 'Microfinance Institutions Network', color: 'var(--color-gold)' },
+    { id: 'cibil', label: 'CIBIL Export', desc: 'Credit bureau data file', color: 'var(--color-primary)' },
+    { id: 'rbi', label: 'RBI Report', desc: 'Reserve Bank of India submission', color: 'var(--color-blue)' },
+    { id: 'mfin', label: 'MFIN Report', desc: 'Microfinance Institutions Network', color: 'var(--color-gold)' },
   ];
 
   return (
@@ -99,7 +108,7 @@ export default function Compliance() {
       {/* Tabs */}
       <div className="tabs" style={{ marginBottom: 20 }}>
         {['alerts', 'kyc-reminders'].map(t => (
-          <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)} id={`compliance-tab-${t.replace('-','')}`}>
+          <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)} id={`compliance-tab-${t.replace('-', '')}`}>
             {t === 'alerts' ? 'Compliance Alerts' : 'KYC Reminders'}
             {t === 'kyc-reminders' && kycReminders.length > 0 && (
               <span style={{ marginLeft: 6, background: 'var(--color-gold)', color: '#000', borderRadius: '999px', padding: '1px 7px', fontSize: '0.65rem', fontWeight: 700 }}>
@@ -130,7 +139,7 @@ export default function Compliance() {
               <tbody>
                 {alerts.map((a, i) => (
                   <tr key={i}>
-                    <td style={{ fontWeight: 600 }}>{a.title ?? a.event ?? `Alert ${i+1}`}</td>
+                    <td style={{ fontWeight: 600 }}>{a.title ?? a.event ?? `Alert ${i + 1}`}</td>
                     <td>{a.dueDate ? new Date(a.dueDate).toLocaleDateString() : '—'}</td>
                     <td>{a.category ?? '—'}</td>
                     <td>

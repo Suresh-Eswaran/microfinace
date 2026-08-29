@@ -144,7 +144,7 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* ── Main content ────────────────────────────────── */}
+      {/* ── Main content ─────────────────────────────── */}
       <main className={`main-content ${collapsed ? 'collapsed' : ''}`}>
         <div className="page-content">
           <Outlet />
