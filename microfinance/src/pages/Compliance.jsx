@@ -1,6 +1,7 @@
-import { AlertTriangle, Download, RefreshCw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Download, FileSpreadsheet, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { complianceApi } from '../api/adminApi';
+import { exportToExcel } from '../utils/excelExporter';
 
 export default function Compliance() {
   const [kycReminders, setKycReminders] = useState([]);
@@ -30,20 +31,22 @@ export default function Compliance() {
     setExporting(type); setExportMsg('');
     try {
       let result;
-      if (type === 'cibil') result = await complianceApi.cibilExport();
-      else if (type === 'rbi') result = await complianceApi.rbiExport();
-      else if (type === 'mfin') result = await complianceApi.mfinReport();
+      let title = '';
+      if (type === 'cibil') {
+        result = await complianceApi.cibilExport();
+        title = 'CIBIL Credit Bureau Report';
+      } else if (type === 'rbi') {
+        result = await complianceApi.rbiExport();
+        title = 'RBI Regulatory Compliance Report';
+      } else if (type === 'mfin') {
+        result = await complianceApi.mfinReport();
+        title = 'MFIN Network Return Report';
+      }
 
-      // Trigger automatic file download in browser
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(result, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `${type}_report_${new Date().toISOString().slice(0, 10)}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
+      // Export directly to styled Excel format
+      exportToExcel(result, `${type}_report`, title);
 
-      setExportMsg(`${type.toUpperCase()} report generated & downloaded successfully!`);
+      setExportMsg(`${type.toUpperCase()} report generated & downloaded as Excel spreadsheet successfully!`);
     } catch (err) {
       setExportMsg(`Export failed: ${err.message}`);
     } finally {
@@ -51,10 +54,18 @@ export default function Compliance() {
     }
   };
 
+  const exportCurrentTable = () => {
+    if (tab === 'alerts') {
+      exportToExcel(alerts, 'compliance_alerts', 'Compliance Alerts & Deadlines');
+    } else {
+      exportToExcel(kycReminders, 'kyc_reminders', 'Pending Client KYC Reminders');
+    }
+  };
+
   const exportActions = [
-    { id: 'cibil', label: 'CIBIL Export', desc: 'Credit bureau data file', color: 'var(--color-primary)' },
-    { id: 'rbi', label: 'RBI Report', desc: 'Reserve Bank of India submission', color: 'var(--color-blue)' },
-    { id: 'mfin', label: 'MFIN Report', desc: 'Microfinance Institutions Network', color: 'var(--color-gold)' },
+    { id: 'cibil', label: 'CIBIL Export', desc: 'Credit bureau Excel report', color: 'var(--color-primary)' },
+    { id: 'rbi', label: 'RBI Report', desc: 'Reserve Bank of India Excel return', color: 'var(--color-blue)' },
+    { id: 'mfin', label: 'MFIN Report', desc: 'MFIN Network Excel submission', color: 'var(--color-gold)' },
   ];
 
   return (

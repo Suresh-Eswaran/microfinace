@@ -1,7 +1,8 @@
-import { Filter, Plus, Search } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Filter, Plus, Search, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loanApi } from '../api/loanApi';
+import { useAuth } from '../context/AuthContext';
 
 const STATUS_BADGE = {
   SUBMITTED:  'badge-blue',
@@ -15,13 +16,105 @@ const STATUS_BADGE = {
 
 const STATUSES = ['ALL', 'SUBMITTED', 'APPROVED', 'DISBURSED', 'REJECTED', 'CLOSED'];
 
+function DeleteLoanModal({ loan, onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+
+  const handleDelete = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await loanApi.delete(loan.id);
+      onSuccess(loan.id);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 480 }}>
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-red)'
+            }}>
+              <AlertTriangle size={18} />
+            </div>
+            <h3 style={{ margin: 0, color: 'var(--color-red)' }}>Delete Loan Record</h3>
+          </div>
+          <button className="modal-close" onClick={onClose} id="close-delete-loan-modal"><X size={16} /></button>
+        </div>
+
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+          <p style={{ margin: '0 0 12px 0' }}>
+            Are you sure you want to delete Loan <strong style={{ color: 'var(--text-primary)' }}>#{loan.id}</strong> (Amount: <code>₹{Number(loan.amountRequested).toLocaleString('en-IN')}</code>, Status: <code>{loan.status}</code>, Client: <code>#{loan.clientId}</code>)?
+          </p>
+          <div style={{
+            background: 'var(--color-surface-2)',
+            padding: '12px 14px',
+            borderRadius: 8,
+            borderLeft: '3px solid var(--color-primary)',
+            fontSize: '0.82rem'
+          }}>
+            <strong>Note:</strong> Deleting this loan will cleanly remove its EMI schedules, repayment logs, and related deliberation records.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={loading}>
+            Cancel
+          </button>
+          <button
+            id="confirm-delete-loan-btn"
+            type="button"
+            className="btn btn-danger"
+            onClick={handleDelete}
+            disabled={loading}
+            style={{
+              background: 'var(--color-red)',
+              color: '#fff',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            {loading ? <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : <Trash2 size={15} />}
+            Delete Loan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Loans() {
-  const [loans, setLoans]       = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [search, setSearch]     = useState('');
-  const [filterStatus, setFilter]= useState('ALL');
-  const [lookupId, setLookupId] = useState('');
-  const [error, setError]       = useState('');
+  const { isCollectionAgent, isAdmin, isBranchManager } = useAuth();
+  const [loans, setLoans]         = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [search, setSearch]       = useState('');
+  const [filterStatus, setFilter] = useState('ALL');
+  const [lookupId, setLookupId]   = useState('');
+  const [loanToDelete, setLoanToDelete] = useState(null);
+  const [error, setError]         = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,10 +134,11 @@ export default function Loans() {
 
   const lookupLoan = async () => {
     if (!lookupId) return;
-    setError(''); setLoading(true);
+    setError(''); 
+    setSuccessMsg('');
+    setLoading(true);
     try {
       const data = await loanApi.getById(lookupId);
-      // backend returns Map<String, Object>, may have loanApplication nested or flat
       const loan = data.loanApplication ?? data;
       setLoans([loan]);
     } catch (err) {
@@ -56,7 +150,9 @@ export default function Loans() {
 
   const lookupByClient = async () => {
     if (!lookupId) return;
-    setError(''); setLoading(true);
+    setError(''); 
+    setSuccessMsg('');
+    setLoading(true);
     try {
       const data = await loanApi.getByClient(lookupId);
       setLoans(Array.isArray(data) ? data : []);
@@ -65,6 +161,12 @@ export default function Loans() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteSuccess = (deletedId) => {
+    setLoans(prev => prev.filter(l => l.id !== deletedId));
+    setSuccessMsg(`Loan #${deletedId} and associated schedules deleted successfully.`);
+    setTimeout(() => setSuccessMsg(''), 5000);
   };
 
   const filtered = loans.filter(l => {
@@ -83,10 +185,18 @@ export default function Loans() {
           <h1 className="page-title">Loan Applications</h1>
           <p className="page-subtitle">Search and manage the loan lifecycle</p>
         </div>
-        <Link to="/loans/apply" id="new-loan-application-btn" className="btn btn-primary">
-          <Plus size={16} /> New Application
-        </Link>
+        {!isCollectionAgent && (
+          <Link to="/loans/apply" id="new-loan-application-btn" className="btn btn-primary">
+            <Plus size={16} /> New Application
+          </Link>
+        )}
       </div>
+
+      {successMsg && (
+        <div className="alert alert-success" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle size={16} /> {successMsg}
+        </div>
+      )}
 
       {/* Lookup Panel */}
       <div className="card" style={{ marginBottom: 20 }}>
@@ -179,7 +289,20 @@ export default function Loans() {
                     {l.appliedDate ? new Date(l.appliedDate).toLocaleDateString() : '—'}
                   </td>
                   <td onClick={e => e.stopPropagation()}>
-                    <Link to={`/loans/${l.id}`} className="btn btn-ghost btn-sm" id={`view-loan-${l.id}`}>View</Link>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <Link to={`/loans/${l.id}`} className="btn btn-ghost btn-sm" id={`view-loan-${l.id}`}>View</Link>
+                      {(isAdmin || isBranchManager) && (
+                        <button
+                          id={`delete-loan-${l.id}`}
+                          className="btn btn-ghost btn-sm"
+                          title="Delete Loan"
+                          onClick={() => setLoanToDelete(l)}
+                          style={{ color: 'var(--color-red)', padding: '4px 8px' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -189,6 +312,14 @@ export default function Loans() {
             Showing {filtered.length} of {loans.length} records
           </div>
         </div>
+      )}
+
+      {loanToDelete && (
+        <DeleteLoanModal
+          loan={loanToDelete}
+          onClose={() => setLoanToDelete(null)}
+          onSuccess={handleDeleteSuccess}
+        />
       )}
     </div>
   );

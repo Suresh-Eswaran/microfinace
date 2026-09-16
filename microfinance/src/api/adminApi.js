@@ -30,9 +30,13 @@ export const groupApi = {
 };
 
 export const userApi = {
+  getAll:         () => api.get('/users'),
+  getById:        (id) => api.get(`/users/${id}`),
   profile:        () => api.get('/users/profile'),
   updateProfile:  (data) => api.put('/users/profile', data),
   approve:        (id)   => api.put(`/users/${id}/approve`),
   unlock:         (id)   => api.put(`/users/${id}/unlock`),
+  setStatus:      (id, status) => api.put(`/users/${id}/status?status=${status}`),
+  delete:         (id)   => api.delete(`/users/${id}`),
   auditLogs:      () => api.get('/users/audit-logs'),
 };

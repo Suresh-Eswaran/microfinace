@@ -17,6 +17,7 @@ import {
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 const navSections = [
   {
@@ -139,6 +140,7 @@ export default function Layout() {
         </div>
 
         <div className="topbar-right">
+          <ThemeToggle />
           <div className="role-badge">{user?.role?.replace('_', ' ') ?? 'USER'}</div>
           <div className="avatar" title={user?.email}>{initials}</div>
         </div>

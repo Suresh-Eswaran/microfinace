@@ -4,6 +4,7 @@ export const loanApi = {
   apply:           (data)   => api.post('/loans/apply', data),
   getAll:          ()       => api.get('/loans'),
   getById:         (id)     => api.get(`/loans/${id}`),
+  delete:          (id)     => api.delete(`/loans/${id}`),
   approve:         (id)     => api.put(`/loans/${id}/approve`),
   reject:          (id, data) => api.put(`/loans/${id}/reject`, data),
   disburse:        (id)     => api.post(`/loans/${id}/disburse`),

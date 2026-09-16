@@ -1,18 +1,19 @@
-import { Plus, Search, ShieldCheck, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Plus, Search, ShieldCheck, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { clientApi } from '../api/clientApi';
+import { useAuth } from '../context/AuthContext';
 
 const KYC_BADGE = {
-  PENDING:  { cls: 'badge-gold',   label: 'Pending' },
-  VERIFIED: { cls: 'badge-green',  label: 'Verified' },
-  REJECTED: { cls: 'badge-red',    label: 'Rejected' },
+  PENDING: { cls: 'badge-gold', label: 'Pending' },
+  VERIFIED: { cls: 'badge-green', label: 'Verified' },
+  REJECTED: { cls: 'badge-red', label: 'Rejected' },
 };
 
 function RegisterModal({ onClose, onSuccess }) {
   const [form, setForm] = useState({ name: '', phoneNumber: '', plainAadhaar: '', panNumber: '', cibilScore: '', groupId: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
 
   const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
@@ -24,7 +25,7 @@ function RegisterModal({ onClose, onSuccess }) {
       const payload = {
         ...form,
         cibilScore: form.cibilScore ? Number(form.cibilScore) : undefined,
-        groupId:    form.groupId    ? Number(form.groupId)    : undefined,
+        groupId: form.groupId ? Number(form.groupId) : undefined,
       };
       const client = await clientApi.register(payload);
       onSuccess(client);
@@ -88,13 +89,105 @@ function RegisterModal({ onClose, onSuccess }) {
   );
 }
 
+function DeleteClientModal({ client, onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleDelete = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await clientApi.delete(client.id);
+      onSuccess(client.id, client.name);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 480 }}>
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-red)'
+            }}>
+              <AlertTriangle size={18} />
+            </div>
+            <h3 style={{ margin: 0, color: 'var(--color-red)' }}>Delete Client Profile</h3>
+          </div>
+          <button className="modal-close" onClick={onClose} id="close-delete-modal"><X size={16} /></button>
+        </div>
+
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+          <p style={{ margin: '0 0 12px 0' }}>
+            Are you sure you want to delete client <strong style={{ color: 'var(--text-primary)' }}>{client.name}</strong> (Client ID: <code>#{client.id}</code>, Phone: <code>{client.phoneNumber}</code>)?
+          </p>
+          <div style={{
+            background: 'var(--color-surface-2)',
+            padding: '12px 14px',
+            borderRadius: 8,
+            borderLeft: '3px solid var(--color-primary)',
+            fontSize: '0.82rem'
+          }}>
+            <strong>Policy Check:</strong> Client deletion is permitted for completed clients (where all loans are <code>CLOSED</code> / <code>REJECTED</code> or client has no active loans). Active loans in progress will be protected.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={loading}>
+            Cancel
+          </button>
+          <button
+            id="confirm-delete-client-btn"
+            type="button"
+            className="btn btn-danger"
+            onClick={handleDelete}
+            disabled={loading}
+            style={{
+              background: 'var(--color-red)',
+              color: '#fff',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            {loading ? <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : <Trash2 size={15} />}
+            Delete Client
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Clients() {
-  const [clients, setClients]   = useState([]);
-  const [search, setSearch]     = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [showModal, setShowModal]= useState(false);
+  const { isCollectionAgent, isAdmin, isBranchManager } = useAuth();
+  const [clients, setClients] = useState([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState(null);
   const [lookupId, setLookupId] = useState('');
-  const [error, setError]       = useState('');
+  const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     const fetchAllClients = async () => {
@@ -113,7 +206,9 @@ export default function Clients() {
 
   const lookupClient = async () => {
     if (!lookupId) return;
-    setError(''); setLoading(true);
+    setError('');
+    setSuccessMsg('');
+    setLoading(true);
     try {
       const client = await clientApi.getById(lookupId);
       setClients([client]);
@@ -126,6 +221,14 @@ export default function Clients() {
 
   const handleSuccess = client => {
     setClients(prev => [client, ...prev]);
+    setSuccessMsg(`Client ${client.name} registered successfully.`);
+    setTimeout(() => setSuccessMsg(''), 5000);
+  };
+
+  const handleDeleteSuccess = (deletedId, clientName) => {
+    setClients(prev => prev.filter(c => c.id !== deletedId));
+    setSuccessMsg(`Client #${deletedId} (${clientName}) and associated completed records deleted successfully.`);
+    setTimeout(() => setSuccessMsg(''), 6000);
   };
 
   const filtered = clients.filter(c =>
@@ -139,12 +242,20 @@ export default function Clients() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Clients</h1>
-          <p className="page-subtitle">Manage borrower profiles and KYC</p>
+          <p className="page-subtitle">Manage borrower profiles, KYC, and completed client lifecycle</p>
         </div>
-        <button id="open-register-client-btn" className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={16} /> Register Client
-        </button>
+        {!isCollectionAgent && (
+          <button id="open-register-client-btn" className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={16} /> Register Client
+          </button>
+        )}
       </div>
+
+      {successMsg && (
+        <div className="alert alert-success" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CheckCircle size={16} /> {successMsg}
+        </div>
+      )}
 
       {/* Lookup by ID */}
       <div className="card" style={{ marginBottom: 20 }}>
@@ -201,6 +312,7 @@ export default function Clients() {
                 <th>ID</th>
                 <th>Name</th>
                 <th>Phone</th>
+                <th>PAN</th>
                 <th>CIBIL Score</th>
                 <th>KYC Status</th>
                 <th>Group</th>
@@ -216,6 +328,7 @@ export default function Clients() {
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>#{c.id}</td>
                     <td style={{ fontWeight: 600 }}>{c.name}</td>
                     <td>{c.phoneNumber}</td>
+                    <td>{c.panNumber || '—'}</td>
                     <td>
                       {c.cibilScore ? (
                         <span style={{ color: c.cibilScore >= 700 ? 'var(--color-primary)' : c.cibilScore >= 550 ? 'var(--color-gold)' : 'var(--color-red)', fontWeight: 700 }}>
@@ -229,7 +342,22 @@ export default function Clients() {
                       {c.createdDate ? new Date(c.createdDate).toLocaleDateString() : '—'}
                     </td>
                     <td>
-                      <Link to={`/clients/${c.id}`} className="btn btn-ghost btn-sm" id={`view-client-${c.id}`}>View</Link>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <Link to={`/clients/${c.id}`} className="btn btn-ghost btn-sm" id={`view-client-${c.id}`}>
+                          View
+                        </Link>
+                        {(isAdmin || isBranchManager) && (
+                          <button
+                            id={`delete-client-${c.id}`}
+                            className="btn btn-ghost btn-sm"
+                            title="Delete Client Profile"
+                            onClick={() => setClientToDelete(c)}
+                            style={{ color: 'var(--color-red)', padding: '4px 8px' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -240,6 +368,13 @@ export default function Clients() {
       )}
 
       {showModal && <RegisterModal onClose={() => setShowModal(false)} onSuccess={handleSuccess} />}
+      {clientToDelete && (
+        <DeleteClientModal
+          client={clientToDelete}
+          onClose={() => setClientToDelete(null)}
+          onSuccess={handleDeleteSuccess}
+        />
+      )}
     </div>
   );
 }

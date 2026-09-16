@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   Bar,
@@ -16,6 +16,7 @@ import {
   YAxis,
 } from 'recharts';
 import { portfolioApi } from '../api/portfolioApi';
+import { exportToExcel } from '../utils/excelExporter';
 
 const CHART_COLORS = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
 
@@ -61,11 +62,11 @@ export default function Portfolio() {
         portfolioApi.parSegmented(),
         portfolioApi.collectionEfficiency(),
         portfolioApi.delinquencyHeatmap(),
-        portfolioApi.officerProductivity(),
+        portfolioApi.officersProductivity(),
         portfolioApi.yieldCost(),
       ]);
       if (results[0].status === 'fulfilled' && results[0].value) setParSeg(results[0].value);
-      if (results[1].status === 'fulfilled' && results[1].value?.monthly) setEff(results[1].value.monthly);
+      if (results[1].status === 'fulfilled' && Array.isArray(results[1].value)) setEff(results[1].value);
       if (results[2].status === 'fulfilled' && Array.isArray(results[2].value)) setHeatmap(results[2].value);
       if (results[3].status === 'fulfilled' && Array.isArray(results[3].value)) setOfficers(results[3].value);
       if (results[4].status === 'fulfilled' && results[4].value) {
@@ -83,6 +84,18 @@ export default function Portfolio() {
 
   useEffect(() => { fetchAll(); }, []);
 
+  const handleExportPortfolio = () => {
+    if (tab === 'officers') {
+      exportToExcel(officers, 'officer_productivity_report', 'Loan Officers Productivity Report');
+    } else if (tab === 'delinquency') {
+      exportToExcel(heatmap, 'delinquency_heatmap_report', 'Delinquency & PAR Heatmap');
+    } else if (tab === 'yield') {
+      exportToExcel(yieldCost, 'yield_and_cost_report', 'Yield & Cost of Funds Analysis');
+    } else {
+      exportToExcel(efficiency, 'collection_efficiency_report', 'Monthly Collection Efficiency');
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <div className="page-header">
@@ -90,9 +103,14 @@ export default function Portfolio() {
           <h1 className="page-title">Portfolio Analytics</h1>
           <p className="page-subtitle">Real-time insights into your loan portfolio performance</p>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={fetchAll} disabled={loading} id="refresh-portfolio-btn">
-          <RefreshCw size={14} className={loading ? 'spinner' : ''} /> Refresh
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-primary btn-sm" onClick={handleExportPortfolio} id="export-portfolio-excel-btn">
+            <Download size={14} /> Export Excel
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={fetchAll} disabled={loading} id="refresh-portfolio-btn">
+            <RefreshCw size={14} className={loading ? 'spinner' : ''} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

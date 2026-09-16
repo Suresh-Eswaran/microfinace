@@ -60,6 +60,13 @@ function RecordModal({ onClose, onSuccess, prefillEmiId }) {
             </div>
           </div>
           <div className="form-group">
+            <label className="form-label">Payment Mode</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--color-surface-2)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+              <span className="badge badge-green" style={{ fontSize: '0.85rem', fontWeight: 600 }}>💵 CASH ONLY</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Accepted via physical cash</span>
+            </div>
+          </div>
+          <div className="form-group">
             <label className="form-label" htmlFor="col-by">Collected By (User ID) *</label>
             <input id="col-by" className="form-input" type="number" name="collectedBy" value={form.collectedBy} onChange={handleChange} required />
           </div>
@@ -114,6 +121,13 @@ export default function Collections() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    if (prefillEmiId) {
+      setSelectedEmiId(prefillEmiId);
+      setShowModal(true);
+    }
+  }, [prefillEmiId]);
 
   const handleSuccess = () => {
     fetchData();

@@ -1,13 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authApi } from '../api/authApi';
-
 const AuthContext = createContext(null);
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);      // { userId, email, role, token }
   const [loading, setLoading] = useState(true);
 
-  // Rehydrate from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('mf_user');
     if (stored) {
@@ -19,10 +16,10 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     const res = await authApi.login(email, password);
     const userData = {
-      token:  res.token,
+      token: res.token,
       userId: res.userId,
-      email:  res.email,
-      role:   res.role,
+      email: res.email,
+      role: res.role,
     };
     localStorage.setItem('mf_token', res.token);
     localStorage.setItem('mf_user', JSON.stringify(userData));
@@ -41,11 +38,11 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  const isAdmin          = user?.role === 'ADMIN';
-  const isBranchManager  = user?.role === 'BRANCH_MANAGER';
-  const isCreditOfficer  = user?.role === 'CREDIT_OFFICER';
-  const isLoanOfficer    = user?.role === 'LOAN_OFFICER';
-  const isCollectionAgent= user?.role === 'COLLECTIONS_AGENT';
+  const isAdmin = user?.role === 'ADMIN';
+  const isBranchManager = user?.role === 'BRANCH_MANAGER';
+  const isCreditOfficer = user?.role === 'CREDIT_OFFICER';
+  const isLoanOfficer = user?.role === 'LOAN_OFFICER';
+  const isCollectionAgent = user?.role === 'COLLECTIONS_AGENT';
 
   return (
     <AuthContext.Provider value={{
